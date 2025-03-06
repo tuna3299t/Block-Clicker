@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Para Sayacı + Black Market + Mini-Game</title>
+  <style>
+    /* Temel stil ve resetler */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: linear-gradient(to right, #f2f2f2, #ffffff); }
+    .topBar {
+      position: fixed; top: 0; left: 0; width: 100%; background: #ecf0f1;
+      padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .topBar h1 { font-size: 24px; color: #333; margin-right: 20px; }
+    .topBar p { font-size: 16px; color: #555; margin: 0 10px; }
+    #blackMarketBtn {
+      background: #8e44ad; color: #fff; border: none; padding: 10px 20px; font-size: 16px;
+      cursor: pointer; border-radius: 5px; transition: background 0.3s; margin: 0 10px;
+    }
+    #blackMarketBtn:hover { background: #9b59b6; }
+    .mainContainer { display: flex; justify-content: space-between; margin-top: 70px; padding: 20px; }
+    .panel, .centerPanel { position: relative; z-index: 100; }
+    .panel {
+      width: 25%; min-width: 200px; background: #fff; border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 10px; margin: 0 10px;
+      display: flex; flex-direction: column;
+    }
+    .panel h2 { text-align: center; font-size: 20px; color: #555; cursor: pointer; }
+    .panelContent { max-height: 300px; overflow-y: auto; margin-top: 5px; }
+    .centerPanel { flex: 1; display: flex; align-items: center; justify-content: center; }
+    #box {
+      width: 120px; height: 120px; background: #f39c12; border: none; border-radius: 12px;
+      color: #fff; font-size: 18px; font-weight: bold; cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s, background 0.2s;
+    }
+    #box:hover { transform: scale(1.1); }
+    .gemMode { background: purple !important; }
+    .animate { animation: pulse 0.5s; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+    .btn {
+      display: block; width: 100%; padding: 10px; margin: 6px 0; font-size: 16px;
+      font-weight: bold; border-radius: 50px; border: 2px solid #3498db;
+      background: #3498db; color: #fff; cursor: pointer; transition: 0.3s; text-align: center;
+    }
+    .btn:hover { background: #2980b9; border-color: #2980b9; transform: scale(1.05); }
+    .btn:disabled { background: #aaa; border-color: #aaa; cursor: not-allowed; transform: none; }
+    /* Spawn animasyonları: Küpler UI elemanlarının arkasında */
+    #miniContainer {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 1;
+    }
+    .miniClickerCube, .miniFactoryCube, .factoryCube, .bigFactoryCube {
+      position: absolute; opacity: 0.8; animation: spawn 0.5s forwards;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .miniClickerCube { width: 30px; height: 30px; background: #2ecc71; border-radius: 4px; }
+    .miniFactoryCube, .factoryCube, .bigFactoryCube { width: 40px; height: 40px; border-radius: 8px; }
+    .miniFactoryCube { background: rgba(155,89,182,0.7); }
+    .factoryCube { background: rgba(241,196,15,0.7); }
+    .bigFactoryCube { background: rgba(231,76,60,0.7); }
+    @keyframes spawn { 0% { transform: scale(0) rotate(0deg); opacity: 0; } 50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; } 100% { transform: scale(1) rotate(360deg); opacity: 1; } }
+    #message {
+      display: none; position: fixed; top: 20px; right: 20px; background: #e74c3c;
+      color: #fff; padding: 15px 30px; border-radius: 5px; font-size: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1); z-index: 1100;
+    }
+    #boostBarContainer { position: fixed; bottom: 0; left: 0; width: 100%; height: 10px; background: #ddd; z-index: 1000; }
+    #boostBarFill {
+      width: 0%; height: 100%; background: #27ae60; transition: width 0.1s linear;
+    }
+    /* Black Market Panel */
+    #blackMarketMenu {
+      position: fixed; top: 70px; right: -600px; width: 600px; max-width: 90%;
+      background: #1e1e2f; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      transition: right 0.5s ease; z-index: 1200; max-height: calc(100vh - 70px); overflow-y: auto;
+    }
+    #blackMarketMenu.show { right: 0; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+    .tabs button { flex: 1; padding: 10px; background: #2b2b40; border: none; color: #fff; cursor: pointer; border-radius: 6px; transition: background 0.3s; }
+    .tabs button:hover { background: #373757; }
+    .bmHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .bmHeader .title { font-size: 18px; font-weight: bold; color: #ffec5c; }
+    .bmHeader .gems { font-size: 16px; font-weight: bold; color: #ffec5c; }
+    .bmItems { background: #2a2a4a; border-radius: 6px; padding: 10px; }
+    .bmItems h3 { text-align: center; margin-bottom: 10px; font-weight: normal; color: #a29bfe; text-shadow: 0 0 4px #fff; }
+    .bmItem { display: flex; justify-content: space-between; align-items: center; padding: 8px; margin: 6px 0; background: #3b3b5a; border-radius: 6px; }
+    .bmItem span { display: block; color: #fff; font-size: 14px; line-height: 1.4; text-shadow: 0 0 2px #ccc; }
+    .itemTitle { font-weight: bold; color: #c6ffdd; }
+    .itemDesc { font-style: italic; font-size: 12px; color: #eee; }
+    .buyBtn { background: #8e44ad; border: none; padding: 6px 12px; border-radius: 4px; color: #fff; cursor: pointer; font-size: 14px; transition: background 0.3s; }
+    .buyBtn:hover { background: #9b59b6; }
+    /* Mini-Game (Event) */
+    #eventContainer { margin-top: 20px; padding: 15px; border: 2px dashed #ccc; border-radius: 8px; background: #222; color: #fff; text-align: center; }
+    #eventContainer h2 { color: #ffec5c; margin-bottom: 10px; }
+    #playBtn { background: #2ecc71; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 6px; margin-bottom: 10px; }
+    #playBtn:disabled { background: #555; cursor: not-allowed; }
+    #miniGameArea { display: none; margin-top: 10px; }
+    .miniGameBtn { width: 80px; height: 40px; margin: 5px; background: #3498db; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .miniGameBtn.red { background: #e74c3c; }
+    .cooldownInfo { margin-top: 10px; font-size: 14px; color: #f1c40f; }
+    /* Rainbow Upgrade */
+    .colorful { background: linear-gradient(45deg, #ff0066, #ffcc00, #66ff66, #00ccff); border-color: #fff; color: #000; }
+  </style>
+</head>
+<body>
+  <!-- ÜST BİLGİ ALANI -->
+  <div class="topBar">
+    <h1>Para: <span id="counter">0</span></h1>
+    <p>Saniyede: <span id="perSecond">0</span></p>
+    <p id="levelDisplay">Level: 1</p>
+    <button id="blackMarketBtn">Black Market</button>
+  </div>
+
+  <!-- ORTA ALAN: Yükseltme / Tıklama / Tıklayıcı -->
+  <div class="mainContainer">
+    <div class="panel" id="leftPanel">
+      <h2 id="toggleLeft">Yükseltmeler</h2>
+      <div class="panelContent" id="leftContent"></div>
+    </div>
+    <div class="centerPanel">
+      <button id="box">Tıkla</button>
+    </div>
+    <div class="panel" id="rightPanel">
+      <h2 id="toggleRight">Tıklayıcılar</h2>
+      <div class="panelContent" id="rightContent"></div>
+    </div>
+  </div>
+
+  <!-- ARKA PLANDA KÜP ANİMASYONLARI -->
+  <div id="miniContainer"></div>
+
+  <!-- BOOST BAR -->
+  <div id="boostBarContainer"><div id="boostBarFill"></div></div>
+
+  <!-- MESAJ GÖSTERİCİSİ -->
+  <div id="message">Paran yok! <span id="closeMsg" style="cursor:pointer;">X</span></div>
+
+  <!-- BLACK MARKET PANELİ -->
+  <div id="blackMarketMenu">
+    <div class="tabs">
+      <button id="bmUpgradeTab">Yükseltme</button>
+      <button id="bmClickerTab">Tıklayıcı</button>
+      <button id="bmBlackMarketTab">Black Market</button>
+    </div>
+    <div class="bmContent" id="bmContentArea">
+      <!-- Varsayılan olarak Yükseltme görünümü -->
+      <div class="bmHeader">
+        <div class="title">Zaman Katlayıcısı</div>
+        <div class="gems">Gems: <span id="gemCount"></span></div>
+      </div>
+      <p style="text-align:center; color:#fff; margin-bottom:15px;">
+        Bu sekmede zaman katlayıcısı yükseltmeleri yer alır.
+      </p>
+      <div class="bmItems" id="blackMarketList">
+        <h3>Mevcut Ürünler</h3>
+      </div>
+      <!-- Event alanı -->
+      <div id="eventContainer">
+        <h2>Event</h2>
+        <button id="playBtn">Oyna</button>
+        <div id="miniGameArea">
+          <p style="margin-bottom:5px;">Kırmızı butona <b>1 kez</b> tıklayınca +5 gem!</p>
+          <div>
+            <button class="miniGameBtn" data-index="0">Buton 1</button>
+            <button class="miniGameBtn" data-index="1">Buton 2</button>
+            <button class="miniGameBtn" data-index="2">Buton 3</button>
+            <button class="miniGameBtn" data-index="3">Buton 4</button>
+            <button class="miniGameBtn" data-index="4">Buton 5</button>
+            <button class="miniGameBtn" data-index="5">Buton 6</button>
+          </div>
+        </div>
+        <div class="cooldownInfo" id="cooldownInfo" style="display:none;">
+          Mini-game bekleme süresi: <span id="cdTime">0</span> sn
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /********* OYUN VE KAYIT SİSTEMİ DEĞİŞKENLERİ *********/
+    let para = 0, clickValue = 1, globalMax = 9999, gems = 0;
+    let isGemMode = false, gemTimer = 0, boostActive = false;
+    let baseMultiplier = 5, currentMultiplier = baseMultiplier;
+    let defaultFill = 180000, defaultEffect = 30000;
+    let fillDuration = defaultFill, effectDuration = defaultEffect;
+    let boostCycleStart = Date.now();
+    const stockInterval = 270000;
+    let stockCycleStart = Date.now(), blackMarketOpen = false;
+    let level = 1;
+    let bmView = "upgrade";
+    let rainbowUpgradePrice = 55;
+    const baseRainbowEffect = 75;
+    // Eklenen: bestClickerUpgrade değişkeni
+    let bestClickerUpgrade = { price: 100, effect: 10, mult: 1.75 };
+
+    // Mini-game
+    let miniGameActive = false, miniGameCooldown = false;
+    let miniGameTimer = null, miniGameCooldownTimer = null;
+    let miniGameTimeouts = [];
+    // Üst panel verileri
+    let leftData = [
+      { id:"upgrade1", label:"+1 Para", effect:1, price:20, mult:2 },
+      { id:"leftNew1", label:"+5 Para", effect:5, price:100, mult:1.45 },
+      { id:"leftNew2", label:"+10 Para", effect:10, price:150, mult:1.45 },
+      { id:"leftNew3", label:"+20 Para", effect:20, price:300, mult:1.45 },
+      { id:"leftNew4", label:"+35 Para", effect:35, price:1000, mult:1.58 },
+      { id:"upgrade4", label:"+105 Para", effect:105, price:9545, mult:1.45 },
+      { id:"leftNew5", label:"Ultimate Bonus (+100 Para)", effect:100, price:50000, mult:1.45 }
+    ];
+    let rightData = [
+      { id:"moreClickers", label:"Daha Çok Tıklayıcılar", effect:5, price:30, mult:1.45 },
+      { id:"miniClicker", label:"Mini Tıklayıcı (+15/s)", effect:15, price:50, mult:1.45 },
+      { id:"miniFactory", label:"Mini Fabrika (+50/s)", effect:50, price:150, mult:1.45 },
+      { id:"ultimateClicker", label:"Ultimate Tıklayıcı (+50/s)", effect:50, price:1500, mult:1.45 },
+      { id:"megaClicker", label:"Mega Tıklayıcı (+100/s)", effect:100, price:3000, mult:1.45 },
+      { id:"superClicker", label:"Süper Tıklayıcı (+250/s)", effect:250, price:5000, mult:1.45 },
+      { id:"factory", label:"Fabrika (+115/s)", effect:115, price:7200, mult:1.45 },
+      { id:"ultraFactory", label:"Ultra Fabrika (+400/s)", effect:400, price:7500, mult:1.45 },
+      { id:"hyperFactory", label:"Hyper Fabrika (+600/s)", effect:600, price:10000, mult:1.45 },
+      { id:"bigFactory", label:"Büyük Tıklayıcı (+300/s)", effect:300, price:27000, mult:1.45 }
+    ];
+    let rightCount = {
+      miniClicker:0, miniFactory:0, factory:0, bigFactory:0,
+      ultimateClicker:0, megaClicker:0, superClicker:0,
+      ultraFactory:0, hyperFactory:0, moreClickers:0
+    };
+    let bestClickerBonus = 0;
+    let bmItems = [
+      { id: 1, name: "Katlayıcı Miktarı", cost: 45, effectValue: 7, purchasedThisStock: false, purchasedCount: 0 },
+      { id: 2, name: "Dolum Süresi Kısaltma", cost: 60, effectValue: 175000, purchasedThisStock: false, purchasedCount: 0 },
+      { id: 3, name: "Süre Uzatma", cost: 50, effectValue: 33000, purchasedThisStock: false, purchasedCount: 0 }
+    ];
+
+    function saveGame() {
+      const gameData = { para, gems, bestClickerBonus, leftData, rightData, rightCount, rainbowUpgradePrice, level, bmItems };
+      localStorage.setItem("gameData", JSON.stringify(gameData));
+    }
+    function loadGame() {
+      const data = localStorage.getItem("gameData");
+      if(data) {
+        const gameData = JSON.parse(data);
+        para = gameData.para;
+        gems = gameData.gems;
+        bestClickerBonus = gameData.bestClickerBonus;
+        leftData = gameData.leftData;
+        rightData = gameData.rightData;
+        rightCount = gameData.rightCount;
+        rainbowUpgradePrice = gameData.rainbowUpgradePrice;
+        level = gameData.level;
+        bmItems = gameData.bmItems;
+      }
+    }
+    loadGame();
+
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => document.querySelectorAll(sel);
+    const formatNumber = num =>
+      num >= 1e6 ? (num/1e6).toFixed(1) + "m" :
+      num >= 1e3 ? (num/1e3).toFixed(1) + "k" : num;
+    const formatTime = ms => {
+      let s = Math.floor(ms/1000), m = Math.floor(s/60); s %= 60;
+      return m + ":" + (s < 10 ? "0" + s : s);
+    };
+    const showMsg = (msg, type) => {
+      let m = $("#message");
+      m.style.display = "block";
+      m.style.backgroundColor = (type === "warning") ? "#f1c40f" : "#e74c3c";
+      m.style.color = (type === "warning") ? "#000" : "#fff";
+      m.innerHTML = msg + ' <span id="closeMsg" style="cursor:pointer;">X</span>';
+      $("#closeMsg").onclick = () => m.style.display = "none";
+      setTimeout(() => m.style.display = "none", 5000);
+    };
+    function updateUI() {
+      $("#counter").innerText = formatNumber(para);
+      let income = rightCount.miniClicker * 15 + rightCount.miniFactory * 50 + rightCount.factory * 115
+                 + rightCount.bigFactory * 300 + rightCount.ultimateClicker * 50 + rightCount.megaClicker * 100
+                 + rightCount.superClicker * 250 + rightCount.ultraFactory * 400 + rightCount.hyperFactory * 600;
+      income += bestClickerBonus;
+      $("#perSecond").innerText = formatNumber(income);
+      const gemCountElem = $("#gemCount");
+      if(gemCountElem) gemCountElem.innerText = formatNumber(gems);
+      $("#levelDisplay").innerText = "Level: " + (level = Math.floor(para / 1000) + 1);
+      saveGame();
+    }
+    const spawnCube = (cls, size) => {
+      let cube = document.createElement("div");
+      cube.className = cls;
+      cube.style.left = Math.random() * (window.innerWidth - size) + "px";
+      cube.style.top = Math.random() * (window.innerHeight - size) + "px";
+      $("#miniContainer").appendChild(cube);
+      setTimeout(() => { cube.remove(); }, 2000);
+    };
+
+    function genButtons(data, container, handler) {
+      container.innerHTML = data.map(d => `
+        <button class="btn" id="${d.id}">
+          ${d.label} (Fiyat: ${formatNumber(d.price)})
+        </button>
+      `).join("");
+      data.forEach(d => {
+        $("#" + d.id).onclick = () => handler(d);
+      });
+    }
+
+    // Sol panel: Yükseltmeler
+    genButtons(leftData, $("#leftContent"), d => {
+      if (para < d.price) return showMsg("Paran yok!");
+      para -= d.price;
+      clickValue += d.effect;
+      d.price = Math.ceil(d.price * d.mult);
+      $("#" + d.id).innerText = `${d.label} (Fiyat: ${formatNumber(d.price)})`;
+      updateUI();
+    });
+
+    // Sağ panel: Tıklayıcılar satın alındığında buton kaybolmasın; sadece metin güncellensin.
+    genButtons(rightData, $("#rightContent"), d => {
+      if (para < d.price) return showMsg("Paran yok!");
+      para -= d.price;
+      rightCount[d.id] = (rightCount[d.id] || 0) + 1;
+      d.price = Math.ceil(d.price * d.mult);
+      // Buton metnini güncelliyoruz:
+      $("#" + d.id).innerText = `${d.label} (Adet: ${rightCount[d.id]}, Fiyat: ${formatNumber(d.price)})`;
+      updateUI();
+      let cls = d.id === "miniClicker" ? "miniClickerCube"
+             : d.id === "miniFactory" ? "miniFactoryCube"
+             : d.id === "factory" ? "factoryCube"
+             : "bigFactoryCube";
+      spawnCube(cls, cls === "miniClickerCube" ? 30 : 40);
+    });
+
+    // BM yükseltme butonu (en çok para getiren tıklayıcı için)
+    function generateBestClicker() {
+      let container = $("#rightContent");
+      let btn = document.getElementById("bestClicker");
+      if (!btn) {
+        btn = document.createElement("button");
+        btn.id = "bestClicker";
+        btn.className = "btn";
+        container.appendChild(btn);
+      }
+      btn.innerText = `Yükselt (Fiyat: ${formatNumber(bestClickerUpgrade.price)} gem)`;
+    }
+    generateBestClicker();
+
+    // BM yükseltme butonu tıklama olayında
+    $("#rightContent").addEventListener("click", function(e) {
+      if (e.target && e.target.id === "bestClicker") {
+        if (gems < bestClickerUpgrade.price) return showMsg("Yeterli gem yok!");
+        gems -= bestClickerUpgrade.price;
+        if (bestClickerBonus === 0) {
+          bestClickerBonus = bestClickerUpgrade.effect;
+        } else {
+          bestClickerBonus = Math.ceil(bestClickerBonus * bestClickerUpgrade.mult);
+        }
+        bestClickerUpgrade.price = Math.ceil(bestClickerUpgrade.price * bestClickerUpgrade.mult);
+        // BM Clicker sekmesinde, en çok para getiren tıklayıcıya "colorful" ekleniyor:
+        let bestBtn = document.getElementById("bestClicker");
+        if (bestBtn) bestBtn.classList.add("colorful");
+        updateUI();
+        generateBestClicker();
+        showMsg("En güçlü tıklayıcı yükseltildi!", "warning");
+      }
+    });
+
+    // BM ÜRÜNLERİ (Upgrade ve Black Market sekmesinde)
+    function generateBMList() {
+      let container = $("#blackMarketList");
+      container.innerHTML = '<h3>Mevcut Ürünler</h3>';
+      bmItems.forEach(item => {
+        let disabled = item.purchasedThisStock ? "disabled" : "";
+        let btnText = item.purchasedThisStock ? "Stockta yok" : "Satın Al";
+        let costLabel = formatNumber(item.cost);
+        let descText = "";
+        if (item.id === 1) descText = "Katlayıcı Miktarı: " + item.effectValue + "x";
+        else if (item.id === 2) descText = "Dolum Süresi: " + (item.effectValue / 1000) + " sn";
+        else if (item.id === 3) descText = "Boost Süresi: " + (item.effectValue / 1000) + " sn";
+        let div = document.createElement("div");
+        div.className = "bmItem";
+        div.innerHTML = `
+          <div>
+            <span class="itemTitle">${item.name} [${costLabel} gem]</span>
+            <span class="itemDesc">${descText}</span>
+          </div>
+          <button class="buyBtn" data-id="${item.id}" ${disabled}>${btnText}</button>
+        `;
+        container.appendChild(div);
+      });
+      container.querySelectorAll(".buyBtn").forEach(btn => {
+        btn.onclick = () => purchaseBM(parseInt(btn.getAttribute("data-id")));
+      });
+    }
+    function purchaseBM(id) {
+      let item = bmItems.find(x => x.id === id);
+      if (item.purchasedThisStock) return showMsg("Bu stokta zaten aldınız!");
+      if (gems < item.cost) return showMsg("Yeterli gem yok!");
+      gems -= item.cost;
+      item.purchasedThisStock = true;
+      item.purchasedCount++;
+      if (item.purchasedCount > 1) {
+        if (item.id === 1) {
+          item.effectValue = Math.ceil(item.effectValue * 1.05);
+        } else if (item.id === 2) {
+          item.effectValue = Math.ceil(item.effectValue * 0.95);
+        } else if (item.id === 3) {
+          item.effectValue = Math.ceil(item.effectValue * 1.05);
+        }
+        item.cost = Math.ceil(item.cost * 1.37);
+      }
+      applyBMEffect(item);
+      generateBMList();
+      updateUI();
+      showMsg(item.name + " satın alındı!", "warning");
+    }
+    function applyBMEffect(item) {
+      if (item.id === 1) currentMultiplier = item.effectValue;
+      else if (item.id === 2) fillDuration = item.effectValue;
+      else if (item.id === 3) effectDuration = item.effectValue;
+    }
+    function refreshBMStock() {
+      bmItems.forEach(item => {
+        item.purchasedThisStock = false;
+        let factor = Math.random() * 0.2 + 0.9;
+        item.cost = Math.max(1, Math.round(item.cost * factor));
+      });
+      generateBMList();
+      showMsg("Black Market stokları yenilendi!", "warning");
+    }
+
+    /******** BM PANEL SEKME YÖNETİMİ ********/
+    $("#bmUpgradeTab").addEventListener("click", () => {
+      bmView = "upgrade";
+      $("#bmContentArea").innerHTML = `
+        <div class="bmHeader">
+          <div class="title">Zaman Katlayıcısı</div>
+          <div class="gems">Gems: <span id="gemCount"></span></div>
+        </div>
+        <p style="text-align:center; color:#fff; margin-bottom:15px;">
+          Bu sekmede zaman katlayıcısı yükseltmeleri yer alır.
+        </p>
+        <div class="bmItems" id="blackMarketList">
+          <h3>Mevcut Ürünler</h3>
+        </div>
+        <div id="eventContainer">
+          <h2>Event</h2>
+          <button id="playBtn">Oyna</button>
+          <div id="miniGameArea">
+            <p style="margin-bottom:5px;">Kırmızı butona <b>1 kez</b> tıklayınca +5 gem!</p>
+            <div>
+              <button class="miniGameBtn" data-index="0">Buton 1</button>
+              <button class="miniGameBtn" data-index="1">Buton 2</button>
+              <button class="miniGameBtn" data-index="2">Buton 3</button>
+              <button class="miniGameBtn" data-index="3">Buton 4</button>
+              <button class="miniGameBtn" data-index="4">Buton 5</button>
+              <button class="miniGameBtn" data-index="5">Buton 6</button>
+            </div>
+          </div>
+          <div class="cooldownInfo" id="cooldownInfo" style="display:none;">
+            Mini-game bekleme süresi: <span id="cdTime">0</span> sn
+          </div>
+        </div>
+      `;
+      generateBMList();
+      attachBMEventListeners();
+    });
+    $("#bmClickerTab").addEventListener("click", () => {
+      bmView = "clicker";
+      $("#bmContentArea").innerHTML = `
+        <div class="bmHeader">
+          <div class="title">Rainbow Yükseltme</div>
+          <div class="gems">Gems: <span id="gemCount"></span></div>
+        </div>
+        <p style="text-align:center; color:#fff; margin-bottom:15px;">
+          Bu yükseltme, en çok para getiren tıklayıcınızı güçlendirir. Bonus %75 artar, fiyatı %60 yükselir ve tıklayıcı rengarenk olur.
+        </p>
+        <div style="text-align:center; margin-bottom:15px;">
+          <button id="rainbowUpgrade" class="buyBtn">Rainbow Yükselt (Fiyat: ${formatNumber(rainbowUpgradePrice)} gem)</button>
+        </div>
+        <div class="bmItems" id="blackMarketList">
+          <!-- Ek bilgiler isteğe bağlı -->
+        </div>
+        <div id="eventContainer">
+          <h2>Event</h2>
+          <button id="playBtn">Oyna</button>
+          <div id="miniGameArea">
+            <p style="margin-bottom:5px;">Kırmızı butona <b>1 kez</b> tıklayınca +5 gem!</p>
+            <div>
+              <button class="miniGameBtn" data-index="0">Buton 1</button>
+              <button class="miniGameBtn" data-index="1">Buton 2</button>
+              <button class="miniGameBtn" data-index="2">Buton 3</button>
+              <button class="miniGameBtn" data-index="3">Buton 4</button>
+              <button class="miniGameBtn" data-index="4">Buton 5</button>
+              <button class="miniGameBtn" data-index="5">Buton 6</button>
+            </div>
+          </div>
+          <div class="cooldownInfo" id="cooldownInfo" style="display:none;">
+            Mini-game bekleme süresi: <span id="cdTime">0</span> sn
+          </div>
+        </div>
+      `;
+      $("#rainbowUpgrade").addEventListener("click", () => {
+        if (gems < rainbowUpgradePrice) return showMsg("Yeterli gem yok!");
+        gems -= rainbowUpgradePrice;
+        if (bestClickerBonus === 0) {
+          bestClickerBonus = baseRainbowEffect;
+        } else {
+          bestClickerBonus = Math.ceil(bestClickerBonus * 1.75);
+        }
+        rainbowUpgradePrice = Math.ceil(rainbowUpgradePrice * 1.6);
+        $("#rainbowUpgrade").innerText = `Rainbow Yükselt (Fiyat: ${formatNumber(rainbowUpgradePrice)} gem)`;
+        // En çok para getiren tıklayıcıyı belirle ve "colorful" sınıfı ekle:
+        highlightBestClicker();
+        updateUI();
+        showMsg("Rainbow yükseltme yapıldı!", "warning");
+      });
+      attachBMEventListeners();
+    });
+    $("#bmBlackMarketTab").addEventListener("click", () => {
+      bmView = "blackMarket";
+      $("#bmContentArea").innerHTML = `
+        <div id="eventContainer">
+          <h2>Event</h2>
+          <button id="playBtn">Oyna</button>
+          <div id="miniGameArea">
+            <p style="margin-bottom:5px;">Kırmızı butona <b>1 kez</b> tıklayınca +5 gem!</p>
+            <div>
+              <button class="miniGameBtn" data-index="0">Buton 1</button>
+              <button class="miniGameBtn" data-index="1">Buton 2</button>
+              <button class="miniGameBtn" data-index="2">Buton 3</button>
+              <button class="miniGameBtn" data-index="3">Buton 4</button>
+              <button class="miniGameBtn" data-index="4">Buton 5</button>
+              <button class="miniGameBtn" data-index="5">Buton 6</button>
+            </div>
+          </div>
+          <div class="cooldownInfo" id="cooldownInfo" style="display:none;">
+            Mini-game bekleme süresi: <span id="cdTime">0</span> sn
+          </div>
+        </div>
+        <div class="bmHeader">
+          <div class="title">Black Market</div>
+          <div class="gems">Gems: <span id="gemCount"></span></div>
+        </div>
+        <div class="bmItems" id="blackMarketList">
+          <h3>Mevcut Ürünler</h3>
+        </div>
+      `;
+      generateBMList();
+      attachBMEventListeners();
+    });
+
+    // Yeni: En çok para getiren tıklayıcıyı belirleyip "colorful" sınıfını ekleyen fonksiyon
+    function highlightBestClicker() {
+      const incomeMapping = {
+        miniClicker: 15,
+        miniFactory: 50,
+        factory: 115,
+        bigFactory: 300,
+        ultimateClicker: 50,
+        megaClicker: 100,
+        superClicker: 250,
+        ultraFactory: 400,
+        hyperFactory: 600,
+        moreClickers: 5
+      };
+      let bestId = null, bestIncome = 0;
+      for (let key in incomeMapping) {
+        let count = rightCount[key] || 0;
+        let income = count * incomeMapping[key];
+        if (income > bestIncome) {
+          bestIncome = income;
+          bestId = key;
+        }
+      }
+      rightData.forEach(item => {
+        let btn = document.getElementById(item.id);
+        if (btn) btn.classList.remove("colorful");
+      });
+      if (bestId) {
+        let bestBtn = document.getElementById(bestId);
+        if (bestBtn) bestBtn.classList.add("colorful");
+      }
+    }
+
+    function attachBMEventListeners() {
+      const playBtn = $("#playBtn");
+      const miniGameBtns = $$(".miniGameBtn");
+      const cdInfo = $("#cooldownInfo");
+      const cdTimeEl = $("#cdTime");
+      if (playBtn) {
+        playBtn.addEventListener("click", () => {
+          if (miniGameCooldown) {
+            showMsg("Mini-game beklemede!", "warning");
+            return;
+          }
+          if (miniGameActive) {
+            showMsg("Zaten aktif!", "warning");
+            return;
+          }
+          startMiniGame();
+        });
+      }
+      miniGameBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (!miniGameActive) return;
+          if (btn.classList.contains("red")) {
+            gems += 5;
+            updateUI();
+            btn.classList.remove("red");
+          }
+        });
+      });
+    }
+    function startMiniGame() {
+      miniGameActive = true;
+      $("#miniGameArea").style.display = "block";
+      const playBtn = $("#playBtn");
+      playBtn.disabled = true;
+      miniGameTimer = setTimeout(endMiniGame, 150000);
+      $$(".miniGameBtn").forEach(b => b.classList.remove("red"));
+      scheduleNextRed();
+      showMsg("Mini-game başladı! 2 dakika 30 saniye sürecek...", "warning");
+    }
+    function endMiniGame() {
+      miniGameActive = false;
+      $("#miniGameArea").style.display = "none";
+      showMsg("Mini-game bitti!", "warning");
+      clearTimeout(miniGameTimer);
+      miniGameTimeouts.forEach(t => clearTimeout(t));
+      miniGameTimeouts = [];
+      miniGameCooldown = true;
+      let cdRemaining = 300;
+      const cdInfo = $("#cooldownInfo");
+      const cdTimeEl = $("#cdTime");
+      cdInfo.style.display = "block";
+      cdTimeEl.textContent = cdRemaining;
+      const playBtn = $("#playBtn");
+      playBtn.disabled = true;
+      miniGameCooldownTimer = setInterval(() => {
+        cdRemaining--;
+        cdTimeEl.textContent = cdRemaining;
+        if (cdRemaining <= 0) {
+          clearInterval(miniGameCooldownTimer);
+          miniGameCooldown = false;
+          cdInfo.style.display = "none";
+          playBtn.disabled = false;
+        }
+      }, 1000);
+    }
+    function scheduleNextRed() {
+      if (!miniGameActive) return;
+      let delay = Math.random() * 9000 + 1000;
+      let t = setTimeout(() => {
+        if (!miniGameActive) return;
+        let idx = Math.floor(Math.random() * $$(".miniGameBtn").length);
+        let btn = $$(".miniGameBtn")[idx];
+        if (!btn.classList.contains("red")) {
+          btn.classList.add("red");
+          setTimeout(() => {
+            if (btn.classList.contains("red")) {
+              btn.classList.remove("red");
+            }
+          }, 2000);
+        }
+        scheduleNextRed();
+      }, delay);
+      miniGameTimeouts.push(t);
+    }
+
+    $("#box").onclick = () => {
+      if (isGemMode) { gems++; }
+      else { para += boostActive ? clickValue * currentMultiplier : clickValue; }
+      updateUI();
+      $("#box").classList.add("animate");
+      setTimeout(() => $("#box").classList.remove("animate"), 500);
+    };
+    $("#toggleLeft").onclick = () => {
+      let c = $("#leftContent");
+      c.style.display = (c.style.display === "none" ? "block" : "none");
+    };
+    $("#toggleRight").onclick = () => {
+      let c = $("#rightContent");
+      c.style.display = (c.style.display === "none" ? "block" : "none");
+      $("#toggleRight").innerText = "Tıklayıcıları Yükselt (tıklayıcı rengarenk olur)";
+    };
+
+    setInterval(() => {
+      let income = rightCount.miniClicker * 15 + rightCount.miniFactory * 50 + rightCount.factory * 115
+                 + rightCount.bigFactory * 300 + rightCount.ultimateClicker * 50 + rightCount.megaClicker * 100
+                 + rightCount.superClicker * 250 + rightCount.ultraFactory * 400 + rightCount.hyperFactory * 600;
+      if (!isGemMode) para += boostActive ? income * currentMultiplier : income;
+      updateUI();
+      $$(".miniClickerCube, .miniFactoryCube, .factoryCube, .bigFactoryCube").forEach(c => {
+        c.classList.add("animate");
+        setTimeout(() => c.classList.remove("animate"), 500);
+      });
+      gemTimer++;
+      if (gemTimer >= 100 && !isGemMode) {
+        isGemMode = true;
+        $("#box").classList.add("gemMode");
+        setTimeout(() => {
+          isGemMode = false;
+          $("#box").classList.remove("gemMode");
+          gemTimer = 0;
+        }, 5000);
+      }
+    }, 1000);
+
+    setInterval(() => {
+      let elapsed = Date.now() - boostCycleStart;
+      if (elapsed < fillDuration) {
+        $("#boostBarFill").style.width = (elapsed / fillDuration * 100) + "%";
+      } else if (!boostActive) {
+        boostActive = true;
+        $("#boostBarFill").style.backgroundColor = "#f1c40f";
+        $("#boostBarFill").style.transition = `width ${effectDuration/1000}s linear`;
+        $("#boostBarFill").style.width = "0%";
+        showMsg(currentMultiplier + "x para!", "warning");
+        setTimeout(() => {
+          boostActive = false;
+          boostCycleStart = Date.now();
+          $("#boostBarFill").style.transition = "none";
+          $("#boostBarFill").style.backgroundColor = "#27ae60";
+          $("#boostBarFill").style.width = "0%";
+        }, effectDuration);
+      }
+    }, 100);
+
+    setInterval(() => {
+      let remaining = stockInterval - (Date.now() - stockCycleStart);
+      if (remaining <= 0) {
+        stockCycleStart = Date.now();
+        refreshBMStock();
+        remaining = stockInterval;
+      }
+      $("#blackMarketBtn").innerText = "Black Market (" + formatTime(remaining) + ")";
+    }, 1000);
+
+    $("#blackMarketBtn").onclick = () => {
+      blackMarketOpen = !blackMarketOpen;
+      $("#blackMarketMenu").classList.toggle("show", blackMarketOpen);
+    };
+
+    updateUI();
+  </script>
+</body>
+</html>
